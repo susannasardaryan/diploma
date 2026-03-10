@@ -1,19 +1,19 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import sympy as sp
+from sympy import solve, exp, Eq
 
 x, y = sp.symbols("x y")
 
-RSSI = [
-    (2, 2),
-    (10, 2),
-    (6, 6),
-    (2, 6),
-    (9, 5),
-    (4, 1),
-    (8, 7),
-    (1, 4),
-    ((5, 0), (5, 5)),
+sources = [
+    (2, 2, 1.2),
+    (10, 2, 1.0),
+    (6, 6, 1.5),
+    (2, 6, 0.9),
+    (9, 5, 1.3),
+    (4, 1, 0.8),
+    (8, 7, 1.1),
+    (1, 4, 1.0),
 ]
 
 
@@ -47,13 +47,12 @@ def dist(M, Q):
 
 
 def plotPointsLines(points):
-    for i, p in enumerate(points):
+    for p in points:
         if isPoint(p):
-            ax.scatter(p[0], p[1], color="green", s=40)
-            ax.text(p[0]+0.15, p[1]+0.15, f"P{i}", fontweight='bold',  fontsize=8)
+            ax.scatter(p[0], p[1], color="green", s=50)
         else:
             ax.plot([p[0][0], p[1][0]], [p[0][1], p[1][1]], color="green", linewidth=2)
-            ax.text(p[0][0]+0.15, p[1][0]+0.15, f"L{i}", fontweight='bold',  fontsize=8)
+
 
 def getBoundaryEquations(data):
     equations = {}
@@ -73,13 +72,12 @@ def getBoundaryEquations(data):
             equations[(i, j)] = boundaryEquations
     return equations
 
-
 fig, ax = plt.subplots()
 ax.set_aspect("equal")
-plotPointsLines(RSSI)
 
-equations = getBoundaryEquations(RSSI)
-colors = plt.cm.tab10(np.linspace(0, 1, len(equations)))
+equations = getBoundaryEquations(sources)
+cmap = plt.get_cmap('tab20c')
+colors = cmap(np.linspace(0, 1, len(equations)))
 
 areas = []
 masks = []
@@ -87,7 +85,7 @@ keys = list(equations.keys())
 xs = []
 ys = []
 
-for obj in RSSI:
+for obj in sources:
     if isPoint(obj):
         xs.append(obj[0])
         ys.append(obj[1])
@@ -95,14 +93,16 @@ for obj in RSSI:
         xs.extend([obj[0][0], obj[1][0]])
         ys.extend([obj[0][1], obj[1][1]])
 
+
 pad = 3
-xMin, xMax = min(xs)-pad, max(xs)+pad
-yMin, yMax = min(ys), max(ys)+pad
-res = 280
+xMin, xMax = 0, max(xs)+pad
+yMin, yMax = 0, max(ys)+pad
+res = 600
 
 xs = np.linspace(xMin, xMax, res)
 ys = np.linspace(yMin, yMax, res)
 X, Y = np.meshgrid(xs, ys)
+
 
 for i, key in enumerate(keys):
     mask = np.ones_like(X, dtype=bool)
@@ -112,13 +112,10 @@ for i, key in enumerate(keys):
         mask &= Z <= 0
 
     ax.contourf(
-        X, Y, mask.astype(int), levels=[0.5, 1.5], colors=[colors[i]], alpha=0.3
+        X, Y, mask.astype(int), levels=[0.5, 1.5], colors=[colors[i]], alpha=0.6
     )
-    center_x = np.mean(X[mask])
-    center_y = np.mean(Y[mask])
-    ax.text(center_x, center_y, f"({key[0]}, {key[1]})", fontsize=6,
-                ha="center", va="center")
     areas.append(mask.sum())
 
+plotPointsLines(sources)
 
 plt.show()
