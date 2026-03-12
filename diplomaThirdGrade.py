@@ -7,18 +7,6 @@ x, y = sp.symbols("x y")
 RSSI = [(2, 2), (10, 2), (6, 6), (2, 6), (4, 2)]
 
 
-def getLineParams(line):
-    (x1, y1), (x2, y2) = line
-    a = y1 - y2
-    b = x2 - x1
-    c = x1 * y2 - x2 * y1
-    return a, b, c
-
-
-def isPoint(p):
-    return isinstance(p[0], (int, float))
-
-
 def dist(M, Q):
     return (M[0] - Q[0]) ** 2 + (M[1] - Q[1]) ** 2
 
@@ -56,15 +44,9 @@ def getBoundaryEquations(data, validPairs):
         for k in range(n):
             if k == i or k == j or k == m:
                 continue
-            boundaryEquations.append(
-                sp.simplify(dist((x, y), data[i]) - dist((x, y), data[k]))
-            )
-            boundaryEquations.append(
-                sp.simplify(dist((x, y), data[j]) - dist((x, y), data[k]))
-            )
-            boundaryEquations.append(
-                sp.simplify(dist((x, y), data[m]) - dist((x, y), data[k]))
-            )
+            boundaryEquations.append(dist((x, y), data[i]) - dist((x, y), data[k]))
+            boundaryEquations.append(dist((x, y), data[j]) - dist((x, y), data[k]))
+            boundaryEquations.append(dist((x, y), data[m]) - dist((x, y), data[k]))
         equations[(i, j, m)] = boundaryEquations
     return equations
 
@@ -106,12 +88,8 @@ xs = []
 ys = []
 
 for obj in RSSI:
-    if isPoint(obj):
-        xs.append(obj[0])
-        ys.append(obj[1])
-    else:
-        xs.extend([obj[0][0], obj[1][0]])
-        ys.extend([obj[0][1], obj[1][1]])
+    xs.append(obj[0])
+    ys.append(obj[1])
 
 pad = 3
 xmax = max(xs)

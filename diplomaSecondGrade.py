@@ -88,6 +88,7 @@ def getValidPairs(res):
 
     return list(validPairsSet)
 
+
 def getBoundaryEquations(data, validPairs):
     equations = {}
     n = len(data)
@@ -97,14 +98,11 @@ def getBoundaryEquations(data, validPairs):
         for k in range(n):
             if k == i or k == j:
                 continue
-            boundaryEquations.append(
-                sp.simplify(dist((x, y), data[i]) - dist((x, y), data[k]))
-            )
-            boundaryEquations.append(
-                sp.simplify(dist((x, y), data[j]) - dist((x, y), data[k]))
-            )
+            boundaryEquations.append(dist((x, y), data[i]) - dist((x, y), data[k]))
+            boundaryEquations.append(dist((x, y), data[j]) - dist((x, y), data[k]))
         equations[(i, j)] = boundaryEquations
     return equations
+
 
 def plotDiagram(equations):
     areas = []
