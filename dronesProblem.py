@@ -6,13 +6,7 @@ import sympy as sp
 import math
 
 x, y = sp.symbols("x y")
-random_points = set()
-dt = 0.1
-
-while len(random_points) < 10:
-    x_point = np.random.randint(0, 2000)
-    y_point = np.random.randint(0, 2000)
-    random_points.add((x_point, y_point))
+dt = 0.3
 
 class Drone:
     def __init__(self, id, pos):
@@ -21,14 +15,37 @@ class Drone:
         self.k = 0.3
         self.found = False
 
-drones = list(random_points)
-drone_objects = [Drone(i, p) for i, p in enumerate(drones)]
-
-person_pos = np.array([np.random.randint(300, 1800), np.random.randint(300, 1800)])
-
 def dist(M, Q):
     return (M[0] - Q[0]) ** 2 + (M[1] - Q[1]) ** 2
 
+def getPoints(count, min_distance, min_val, max_val, compare_points=None): 
+    if compare_points is None:
+        compare_points = []
+
+    random_points = set()
+    while len(random_points) < count:
+        x_point = np.random.randint(min_val, max_val)
+        y_point = np.random.randint(min_val, max_val)
+
+        valid_position = True
+        
+        for existing_x, existing_y in random_points:
+            distance = math.sqrt(dist((existing_x, existing_y), (x_point, y_point)))
+            if distance < min_distance:
+                valid_position = False
+                break
+
+        if valid_position:
+            for existing_x, existing_y in compare_points:
+                distance = math.sqrt(dist((existing_x, existing_y), (x_point, y_point)))
+                if distance < min_distance:
+                    valid_position = False
+                    break
+
+        if valid_position:
+            random_points.add((x_point, y_point))
+
+    return random_points
 
 def plotPoints(points, ax, color="black"):
     for i, p in enumerate(points):
@@ -84,36 +101,57 @@ def plotDiagram(equations, ax, X, Y):
 
 
 def searchPerson(drone_objects):
+    global person_not_found
+    found_person = False
     for d in drone_objects:
-        if np.linalg.norm(d.pos - person_pos) < 300:
-            indices = np.argsort(
-                [np.linalg.norm(do.pos - person_pos) for do in drone_objects]
-            )[:3]
-
-            for idx, drone in enumerate(drone_objects):
-                if idx in indices:
-                    drone.k = 3
-                    drone.found = True
-                else:
-                    drone.k = 0.001
-                    drone.found = False
+        if np.linalg.norm(d.pos - person_pos) <= 250:
+            found_person = True
+            person_not_found = True
             break
 
+    if found_person:
+        indices = np.argsort(
+            [np.linalg.norm(do.pos - person_pos) for do in drone_objects]
+        )[:3]
 
-res = 200
+        for idx, drone in enumerate(drone_objects):
+            if idx in indices:
+                drone.k = 6
+                drone.found = True
+            else:
+                drone.k = 0.001
+                drone.found = False
+    else:
+        for drone in drone_objects:
+            drone.k = 0.4
+            drone.found = False
+    return found_person
+
+
+random_points = getPoints(count=10, min_distance=400, min_val=0, max_val=2000)
+drones = list(random_points)
+drone_objects = [Drone(i, p) for i, p in enumerate(drones)]
+person_not_found = False
+person_points = getPoints(count=1, min_distance=300, min_val=400, max_val=1700, compare_points=drones)
+person_pos = list(person_points)[0]
+res = 600
 xs = np.linspace(0, 2000, res)
 ys = np.linspace(0, 2000, res)
 X, Y = np.meshgrid(xs, ys)
 
 fig1, ax1 = plt.subplots(figsize=(8, 8))
 ax1.set_aspect("equal")
-ax1.set_title("Initial State")
-plotPoints(drones, ax1, "green")
+ax1.set_title("Սկզբնական դիրքը")
+plotPoints(drones, ax1, "blue")
 ax1.scatter(person_pos[0], person_pos[1], color="red", marker="X", s=100)
 validPairs1 = getValidPairs(res, drones, X, Y)
 eqs1 = getBoundaryEquations(drones, validPairs1)
 cell_results = plotDiagram(eqs1, ax1, X, Y)
 
+res = 250
+xs = np.linspace(0, 2000, res)
+ys = np.linspace(0, 2000, res)
+X, Y = np.meshgrid(xs, ys)
 Ti_sum = np.zeros((len(drones), 2))
 counts = np.zeros(len(drones))
 for key, center in cell_results.items():
@@ -125,7 +163,7 @@ for i in range(len(drones)):
     if counts[i] > 0:
         Ti = Ti_sum[i] / counts[i]
         k = drone_objects[i].k
-        drone_objects[i].pos = Ti + (drone_objects[i].pos - Ti) * math.exp(k * dt)
+        drone_objects[i].pos = Ti + (drone_objects[i].pos - Ti) * math.exp(-k * dt)
 
 fig2, ax2 = plt.subplots(figsize=(8, 8))
 
@@ -152,39 +190,39 @@ def updateDiagram(frame):
             Ti_sum[idx] += center
             counts[idx] += 1
 
-    searchPerson(drone_objects)
+    not_found = searchPerson(drone_objects)
 
     arrived = 0
-    for d in drone_objects:
-        if d.found and np.linalg.norm(d.pos - person_pos) < 10:
-            arrived += 1
+    for i in range(len(drone_objects)):
+        d = drone_objects[i]
+        if counts[i] > 0:
+            Ti = Ti_sum[i] / counts[i]
+            if not not_found and frame > 30:
+                search_radius = 300
+                offset_x = math.sin(frame * 0.08 + d.id) * search_radius
+                offset_y = math.cos(frame * 0.05 + d.id) * search_radius
 
-    if arrived == 1:
-        ax2.set_title("Մարդը գտնված է!")
-        plotPoints([tuple(d.pos) for d in drone_objects], ax2, "blue")
+                target = np.clip(Ti + np.array([offset_x, offset_y]), 100, 1900)
+            else:
+                target = Ti
+
+            if d.found and np.linalg.norm(d.pos - target) < 10:
+                arrived += 1
+
+            d.pos = target + (d.pos - target) * math.exp(-d.k * dt)
+
+    if arrived >= 2:
+        active_drones = [d.id + 1 for d in drone_objects if d.found]
+        drones_names = ", ".join(map(str, active_drones))
+        ax2.set_title(f"Մարդը գտնված է {drones_names} դրոնների կողմից!")
+        plotPoints([tuple(d.pos) for d in drone_objects], ax2, "green")
         ax2.scatter(person_pos[0], person_pos[1], color="red", marker="X", s=100)
         animation.event_source.stop()
         return
 
-    for i in range(len(drone_objects)):
-        if counts[i] > 0:
-            if drone_objects[i].found:
-                vector_to_signal = person_pos - drone_objects[i].pos
-                distance = np.linalg.norm(vector_to_signal)
-
-                if distance > 0:
-                    direction_vector = vector_to_signal / distance
-                    step_size = drone_objects[i].k * dt * 50
-                    drone_objects[i].pos += direction_vector * step_size
-            else:
-                Ti = Ti_sum[i] / counts[i]
-                direction = Ti - drone_objects[i].pos
-                k = drone_objects[i].k
-                drone_objects[i].pos += direction * math.exp(-k * dt)
-
-    plotPoints([tuple(d.pos) for d in drone_objects], ax2, "blue")
+    plotPoints([tuple(d.pos) for d in drone_objects], ax2, "black")
     ax2.scatter(person_pos[0], person_pos[1], color="red", marker="X", s=100)
 
 
-animation = FuncAnimation(fig2, updateDiagram, frames=20, interval=200, repeat=False)
+animation = FuncAnimation(fig2, updateDiagram, frames=150, interval=50, repeat=False)
 plt.show()
