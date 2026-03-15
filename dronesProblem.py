@@ -6,7 +6,7 @@ import sympy as sp
 import math
 
 x, y = sp.symbols("x y")
-dt = 0.3
+dt = 0.5
 
 class Drone:
     def __init__(self, id, pos):
@@ -123,7 +123,7 @@ def searchPerson(drone_objects):
                 drone.found = False
     else:
         for drone in drone_objects:
-            drone.k = 0.4
+            drone.k = 0.5
             drone.found = False
     return found_person
 
@@ -132,7 +132,7 @@ random_points = getPoints(count=10, min_distance=400, min_val=0, max_val=2000)
 drones = list(random_points)
 drone_objects = [Drone(i, p) for i, p in enumerate(drones)]
 person_not_found = False
-person_points = getPoints(count=1, min_distance=300, min_val=400, max_val=1700, compare_points=drones)
+person_points = getPoints(count=1, min_distance=300, min_val=500, max_val=1400, compare_points=drones)
 person_pos = list(person_points)[0]
 res = 600
 xs = np.linspace(0, 2000, res)
@@ -219,10 +219,12 @@ def updateDiagram(frame):
         ax2.scatter(person_pos[0], person_pos[1], color="red", marker="X", s=100)
         animation.event_source.stop()
         return
-
+    
     plotPoints([tuple(d.pos) for d in drone_objects], ax2, "black")
     ax2.scatter(person_pos[0], person_pos[1], color="red", marker="X", s=100)
+    plt.savefig(f"frames/rame_{frame:03d}.png", dpi=400, bbox_inches='tight')
 
 
-animation = FuncAnimation(fig2, updateDiagram, frames=150, interval=50, repeat=False)
+animation = FuncAnimation(fig2, updateDiagram, frames=150, interval=0, repeat=False)
+animation.save('frames/drone_search.gif', writer='pillow', fps=50)
 plt.show()
