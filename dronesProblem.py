@@ -18,7 +18,7 @@ class Drone:
 def dist(M, Q):
     return (M[0] - Q[0]) ** 2 + (M[1] - Q[1]) ** 2
 
-def getPoints(count, min_distance, min_val, max_val, compare_points=None): 
+def get_points(count, min_distance, min_val, max_val, compare_points=None): 
     if compare_points is None:
         compare_points = []
 
@@ -47,13 +47,13 @@ def getPoints(count, min_distance, min_val, max_val, compare_points=None):
 
     return random_points
 
-def plotPoints(points, ax, color="black"):
+def plot_points(points, ax, color="black"):
     for i, p in enumerate(points):
         ax.scatter(p[0], p[1], color=color, s=40, marker=(4, 1, 45))
         ax.text(p[0] + 15, p[1] - 15, f"$P_{{{i+1}}}$", fontweight="bold", fontsize=8)
 
 
-def getValidPairs(res, points, X, Y):
+def get_valid_pairs(res, points, X, Y):
     distances = np.zeros((res, res, len(points)))
     for idx, obj in enumerate(points):
         distances[:, :, idx] = dist((X, Y), obj)
@@ -62,23 +62,23 @@ def getValidPairs(res, points, X, Y):
     return [tuple(row) for row in unique_rows]
 
 
-def getBoundaryEquations(data, validPairs):
+def get_boundary_equations(data, valid_pairs):
     equations = {}
     n = len(data)
-    for pair in validPairs:
+    for pair in valid_pairs:
         i, j, m = pair
-        boundaryEquations = []
+        boundary_equations = []
         for k in range(n):
             if k == i or k == j or k == m:
                 continue
-            boundaryEquations.append(dist((x, y), data[i]) - dist((x, y), data[k]))
-            boundaryEquations.append(dist((x, y), data[j]) - dist((x, y), data[k]))
-            boundaryEquations.append(dist((x, y), data[m]) - dist((x, y), data[k]))
-        equations[(i, j, m)] = boundaryEquations
+            boundary_equations.append(dist((x, y), data[i]) - dist((x, y), data[k]))
+            boundary_equations.append(dist((x, y), data[j]) - dist((x, y), data[k]))
+            boundary_equations.append(dist((x, y), data[m]) - dist((x, y), data[k]))
+        equations[(i, j, m)] = boundary_equations
     return equations
 
 
-def plotDiagram(equations, ax, X, Y):
+def plot_diagram(equations, ax, X, Y):
     keys = list(equations.keys())
     cell_data = {}
     colors = sns.color_palette("husl", len(keys))
@@ -100,13 +100,11 @@ def plotDiagram(equations, ax, X, Y):
     return cell_data
 
 
-def searchPerson(drone_objects):
-    global person_not_found
+def search_person(drone_objects):
     found_person = False
     for d in drone_objects:
-        if np.linalg.norm(d.pos - person_pos) <= 250:
+        if np.linalg.norm(d.pos - person_pos) <= 300:
             found_person = True
-            person_not_found = True
             break
 
     if found_person:
@@ -128,11 +126,10 @@ def searchPerson(drone_objects):
     return found_person
 
 
-random_points = getPoints(count=10, min_distance=400, min_val=0, max_val=2000)
+random_points = get_points(count=10, min_distance=400, min_val=0, max_val=2000)
 drones = list(random_points)
 drone_objects = [Drone(i, p) for i, p in enumerate(drones)]
-person_not_found = False
-person_points = getPoints(count=1, min_distance=300, min_val=500, max_val=1400, compare_points=drones)
+person_points = get_points(count=1, min_distance=300, min_val=400, max_val=1650, compare_points=drones)
 person_pos = list(person_points)[0]
 res = 600
 xs = np.linspace(0, 2000, res)
@@ -142,13 +139,13 @@ X, Y = np.meshgrid(xs, ys)
 fig1, ax1 = plt.subplots(figsize=(8, 8))
 ax1.set_aspect("equal")
 ax1.set_title("Սկզբնական դիրքը")
-plotPoints(drones, ax1, "blue")
+plot_points(drones, ax1, "blue")
 ax1.scatter(person_pos[0], person_pos[1], color="red", marker="X", s=100)
-validPairs1 = getValidPairs(res, drones, X, Y)
-eqs1 = getBoundaryEquations(drones, validPairs1)
-cell_results = plotDiagram(eqs1, ax1, X, Y)
+valid_pairs1 = get_valid_pairs(res, drones, X, Y)
+eqs1 = get_boundary_equations(drones, valid_pairs1)
+cell_results = plot_diagram(eqs1, ax1, X, Y)
 
-res = 250
+res = 300
 xs = np.linspace(0, 2000, res)
 ys = np.linspace(0, 2000, res)
 X, Y = np.meshgrid(xs, ys)
@@ -168,7 +165,7 @@ for i in range(len(drones)):
 fig2, ax2 = plt.subplots(figsize=(8, 8))
 
 
-def updateDiagram(frame):
+def update_diagram(frame):
     ax2.clear()
     ax2.set_xlim(0, 2000)
     ax2.set_ylim(0, 2000)
@@ -177,10 +174,10 @@ def updateDiagram(frame):
 
     curr_positions = [tuple(d.pos) for d in drone_objects]
 
-    v_pairs = getValidPairs(res, curr_positions, X, Y)
-    eqs = getBoundaryEquations(curr_positions, v_pairs)
+    v_pairs = get_valid_pairs(res, curr_positions, X, Y)
+    eqs = get_boundary_equations(curr_positions, v_pairs)
 
-    current_cell_centers = plotDiagram(eqs, ax2, X, Y)
+    current_cell_centers = plot_diagram(eqs, ax2, X, Y)
 
     Ti_sum = np.zeros((len(drone_objects), 2))
     counts = np.zeros(len(drone_objects))
@@ -190,14 +187,14 @@ def updateDiagram(frame):
             Ti_sum[idx] += center
             counts[idx] += 1
 
-    not_found = searchPerson(drone_objects)
+    person_not_found = search_person(drone_objects)
 
     arrived = 0
     for i in range(len(drone_objects)):
         d = drone_objects[i]
         if counts[i] > 0:
             Ti = Ti_sum[i] / counts[i]
-            if not not_found and frame > 30:
+            if not person_not_found and frame > 30:
                 search_radius = 300
                 offset_x = math.sin(frame * 0.08 + d.id) * search_radius
                 offset_y = math.cos(frame * 0.05 + d.id) * search_radius
@@ -211,20 +208,20 @@ def updateDiagram(frame):
 
             d.pos = target + (d.pos - target) * math.exp(-d.k * dt)
 
-    if arrived >= 2:
+    if arrived >= 3:
         active_drones = [d.id + 1 for d in drone_objects if d.found]
         drones_names = ", ".join(map(str, active_drones))
         ax2.set_title(f"Մարդը գտնված է {drones_names} դրոնների կողմից!")
-        plotPoints([tuple(d.pos) for d in drone_objects], ax2, "green")
+        plot_points([tuple(d.pos) for d in drone_objects], ax2, "green")
         ax2.scatter(person_pos[0], person_pos[1], color="red", marker="X", s=100)
         animation.event_source.stop()
         return
     
-    plotPoints([tuple(d.pos) for d in drone_objects], ax2, "black")
+    plot_points([tuple(d.pos) for d in drone_objects], ax2, "black")
     ax2.scatter(person_pos[0], person_pos[1], color="red", marker="X", s=100)
-    plt.savefig(f"frames/rame_{frame:03d}.png", dpi=400, bbox_inches='tight')
+    # plt.savefig(f"frames/frame_{frame:03d}.png", dpi=400, bbox_inches='tight')
 
 
-animation = FuncAnimation(fig2, updateDiagram, frames=150, interval=0, repeat=False)
-animation.save('frames/drone_search.gif', writer='pillow', fps=50)
+animation = FuncAnimation(fig2, update_diagram, frames=150, interval=200, repeat=False)
+# animation.save('frames/drone_search.gif', writer='pillow', fps=50)
 plt.show()

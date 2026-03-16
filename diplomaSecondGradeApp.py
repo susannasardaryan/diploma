@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import sympy as sp
+import streamlit as st
 
 x, y = sp.symbols("x y")
 
@@ -98,7 +99,7 @@ def get_boundary_equations(data, valid_pairs):
 def plot_diagram(equations):
     areas = []
     keys = list(equations.keys())
-    colors = plt.cm.tab10(np.linspace(0, 1, len(keys)))
+    colors = plt.cm.tab10(np.linspace(0, 1, len(equations)))
 
     for i, key in enumerate(keys):
         mask = np.ones_like(X, dtype=bool)
@@ -156,5 +157,5 @@ validPairs = get_valid_pairs(res)
 equations = get_boundary_equations(signal_points, validPairs)
 plot_diagram(equations)
 
-plt.title("Երկրորդ կարգի Վորոնովի դիագրամ", fontsize=12)
-plt.show()
+plt.title("Երկրորդ կարգի Վորոնովի դիագրամ", fontsize=12, fontweight="bold")
+st.pyplot(fig)

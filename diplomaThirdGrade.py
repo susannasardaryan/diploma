@@ -4,8 +4,7 @@ import sympy as sp
 
 x, y = sp.symbols("x y")
 
-RSSI = [(2, 2), (10, 2), (6, 6), (2, 6), (4, 2)]
-
+signal_points = [(2, 2), (10, 2), (6, 6), (2, 6), (4, 2)]
 
 def dist(M, Q):
     return (M[0] - Q[0]) ** 2 + (M[1] - Q[1]) ** 2
@@ -24,8 +23,8 @@ def plotPointsLines(points):
 
 
 def getValidPairs(res):
-    distances = np.zeros((res, res, len(RSSI)))
-    for idx, obj in enumerate(RSSI):
+    distances = np.zeros((res, res, len(signal_points)))
+    for idx, obj in enumerate(signal_points):
         distances[:, :, idx] = dist((X, Y), obj)
 
     closest_three = np.sort(np.argsort(distances, axis=2)[:, :, :3], axis=2)
@@ -54,7 +53,7 @@ def getBoundaryEquations(data, validPairs):
 def plotDiagram(equations):
     areas = []
     keys = list(equations.keys())
-    colors = plt.cm.tab10(np.linspace(0, 1, len(equations) * 3))
+    colors = plt.cm.tab10(np.linspace(0, 1, len(keys)))
 
     for i, key in enumerate(keys):
         mask = np.ones_like(X, dtype=bool)
@@ -82,12 +81,12 @@ def plotDiagram(equations):
 
 fig, ax = plt.subplots()
 ax.set_aspect("equal")
-plotPointsLines(RSSI)
+plotPointsLines(signal_points)
 
 xs = []
 ys = []
 
-for obj in RSSI:
+for obj in signal_points:
     xs.append(obj[0])
     ys.append(obj[1])
 
@@ -105,8 +104,8 @@ ys = np.linspace(yMin, yMax, res)
 X, Y = np.meshgrid(xs, ys)
 
 validPairs = getValidPairs(res)
-equations = getBoundaryEquations(RSSI, validPairs)
+equations = getBoundaryEquations(signal_points, validPairs)
 plotDiagram(equations)
 
-plt.title("Third Grade Voronoi Diagram", fontsize=12, fontweight="bold")
+plt.title("Երրորդ կարգի Վորոնովի դիագրամ", fontsize=12)
 plt.show()
