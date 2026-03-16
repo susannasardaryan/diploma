@@ -1,33 +1,25 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import sympy as sp
+import streamlit as st
 
 x, y = sp.symbols("x y")
 
-RSSI = [(2, 2), (10, 2), (6, 6), (2, 6), ((5, 0), (5, 5)), (4, 2)]
+signal_points = [(2, 2), (10, 2), (6, 6), (2, 6), ((5, 0), (5, 5))]
 
-
-def getLineParams(line):
-    (x1, y1), (x2, y2) = line
-    a = y1 - y2
-    b = x2 - x1
-    c = x1 * y2 - x2 * y1
-    return a, b, c
-
-
-def isPoint(p):
+def is_point(p):
     return isinstance(p[0], (int, float))
 
 
-def isSegment(s):
+def is_segment(s):
     return isinstance(s[0], tuple)
 
 
 def dist(M, Q):
-    if isSegment(Q):
+    if is_segment(Q):
         x0, y0 = M
         (x1, y1), (x2, y2) = Q
-    elif isSegment(M):
+    elif is_segment(M):
         x0, y0 = Q
         (x1, y1), (x2, y2) = M
     else:
@@ -51,9 +43,9 @@ def dist(M, Q):
     return (x0 - proj_x) ** 2 + (y0 - proj_y) ** 2
 
 
-def plotPointsLines(points):
+def plot_points_and_lines(points):
     for i, p in enumerate(points):
-        if isPoint(p):
+        if is_point(p):
             ax.scatter(p[0], p[1], color="green", s=40)
             ax.text(
                 p[0] + 0.15,
@@ -72,39 +64,39 @@ def plotPointsLines(points):
                 fontsize=8,
             )
 
-def getValidPairs(res):
-    validPairsSet = set()
+def get_valid_pairs(res):
+    valid_pairs_set = set()
 
     for i in range(res):
         for j in range(res):
             distances = []
-            for idx, obj in enumerate(RSSI):
+            for idx, obj in enumerate(signal_points):
                 d = dist((X[i, j], Y[i, j]), obj)
                 distances.append((d, idx))
 
             distances.sort()
             pair = tuple(sorted([distances[0][1], distances[1][1]]))
-            validPairsSet.add(pair)
+            valid_pairs_set.add(pair)
 
-    return list(validPairsSet)
+    return list(valid_pairs_set)
 
 
-def getBoundaryEquations(data, validPairs):
+def get_boundary_equations(data, valid_pairs):
     equations = {}
     n = len(data)
-    for pair in validPairs:
+    for pair in valid_pairs:
         i, j = pair
-        boundaryEquations = []
+        boundary_equations = []
         for k in range(n):
             if k == i or k == j:
                 continue
-            boundaryEquations.append(dist((x, y), data[i]) - dist((x, y), data[k]))
-            boundaryEquations.append(dist((x, y), data[j]) - dist((x, y), data[k]))
-        equations[(i, j)] = boundaryEquations
+            boundary_equations.append(dist((x, y), data[i]) - dist((x, y), data[k]))
+            boundary_equations.append(dist((x, y), data[j]) - dist((x, y), data[k]))
+        equations[(i, j)] = boundary_equations
     return equations
 
 
-def plotDiagram(equations):
+def plot_diagram(equations):
     areas = []
     keys = list(equations.keys())
     colors = plt.cm.tab10(np.linspace(0, 1, len(equations)))
@@ -135,13 +127,13 @@ def plotDiagram(equations):
 
 fig, ax = plt.subplots()
 ax.set_aspect("equal")
-plotPointsLines(RSSI)
+plot_points_and_lines(signal_points)
 
 xs = []
 ys = []
 
-for obj in RSSI:
-    if isPoint(obj):
+for obj in signal_points:
+    if is_point(obj):
         xs.append(obj[0])
         ys.append(obj[1])
     else:
@@ -153,17 +145,17 @@ xmax = max(xs)
 ymax = max(ys)
 xmin = min(xs)
 ymin = min(ys)
-xMin, xMax = min(xmin, ymin) - 2, xmax + pad
-yMin, yMax = min(xmin, ymin) - 2, ymax + pad
-res = 500
+xMin, xMax = min(xmin, ymin), xmax + pad
+yMin, yMax = min(xmin, ymin), ymax + pad
+res = 800
 
 xs = np.linspace(xMin, xMax, res)
 ys = np.linspace(yMin, yMax, res)
 X, Y = np.meshgrid(xs, ys)
 
-validPairs = getValidPairs(res)
-equations = getBoundaryEquations(RSSI, validPairs)
-plotDiagram(equations)
+validPairs = get_valid_pairs(res)
+equations = get_boundary_equations(signal_points, validPairs)
+plot_diagram(equations)
 
 plt.title("Երկրորդ կարգի Վորոնովի դիագրամ", fontsize=12, fontweight="bold")
-plt.show()
+st.pyplot(fig)
