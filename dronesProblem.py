@@ -7,6 +7,7 @@ import math
 
 x, y = sp.symbols("x y")
 dt = 0.5
+PERSON_IS_FOUND = False
 
 class Drone:
     def __init__(self, id, pos):
@@ -101,37 +102,45 @@ def plot_diagram(equations, ax, X, Y):
 
 
 def search_person(drone_objects):
-    found_person = False
-    for d in drone_objects:
-        if np.linalg.norm(d.pos - person_pos) <= 300:
-            found_person = True
-            break
+    global PERSON_IS_FOUND
+    
+    if not PERSON_IS_FOUND:
+        for d in drone_objects:
+            if np.linalg.norm(d.pos - person_pos) <= 300:
+                PERSON_IS_FOUND = True
+                break
 
-    if found_person:
-        indices = np.argsort(
-            [np.linalg.norm(do.pos - person_pos) for do in drone_objects]
-        )[:3]
+    if PERSON_IS_FOUND:
+        distances = [np.linalg.norm(do.pos - person_pos) for do in drone_objects]
+        indices = np.argsort(distances)[:3]
 
         for idx, drone in enumerate(drone_objects):
             if idx in indices:
-                drone.k = 6
+                drone.k = 5.0    
                 drone.found = True
             else:
-                drone.k = 0.001
+                drone.k = 0.5    
                 drone.found = False
+        return True
+
     else:
         for drone in drone_objects:
             drone.k = 0.5
             drone.found = False
-    return found_person
-
+        return False
 
 random_points = get_points(count=10, min_distance=400, min_val=0, max_val=2000)
 drones = list(random_points)
 drone_objects = [Drone(i, p) for i, p in enumerate(drones)]
-person_points = get_points(count=1, min_distance=300, min_val=400, max_val=1650, compare_points=drones)
+person_points = get_points(count=1, min_distance=300, min_val=200, max_val=1800, compare_points=drones)
 person_pos = list(person_points)[0]
-res = 600
+
+res_low = 100
+xs_low = np.linspace(0, 2000, res_low)
+ys_low = np.linspace(0, 2000, res_low)
+X_low, Y_low = np.meshgrid(xs_low, ys_low)
+
+res = 500
 xs = np.linspace(0, 2000, res)
 ys = np.linspace(0, 2000, res)
 X, Y = np.meshgrid(xs, ys)
@@ -141,7 +150,7 @@ ax1.set_aspect("equal")
 ax1.set_title("Սկզբնական դիրքը")
 plot_points(drones, ax1, "blue")
 ax1.scatter(person_pos[0], person_pos[1], color="red", marker="X", s=100)
-valid_pairs1 = get_valid_pairs(res, drones, X, Y)
+valid_pairs1 = get_valid_pairs(res_low, drones, X_low, Y_low)
 eqs1 = get_boundary_equations(drones, valid_pairs1)
 cell_results = plot_diagram(eqs1, ax1, X, Y)
 
@@ -174,7 +183,7 @@ def update_diagram(frame):
 
     curr_positions = [tuple(d.pos) for d in drone_objects]
 
-    v_pairs = get_valid_pairs(res, curr_positions, X, Y)
+    v_pairs = get_valid_pairs(res_low, curr_positions, X_low, Y_low)
     eqs = get_boundary_equations(curr_positions, v_pairs)
 
     current_cell_centers = plot_diagram(eqs, ax2, X, Y)
@@ -187,14 +196,14 @@ def update_diagram(frame):
             Ti_sum[idx] += center
             counts[idx] += 1
 
-    person_not_found = search_person(drone_objects)
+    person_found = search_person(drone_objects)
 
     arrived = 0
     for i in range(len(drone_objects)):
         d = drone_objects[i]
         if counts[i] > 0:
             Ti = Ti_sum[i] / counts[i]
-            if not person_not_found and frame > 30:
+            if not person_found and frame > 35:
                 search_radius = 300
                 offset_x = math.sin(frame * 0.08 + d.id) * search_radius
                 offset_y = math.cos(frame * 0.05 + d.id) * search_radius

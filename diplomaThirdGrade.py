@@ -22,10 +22,10 @@ def plotPointsLines(points):
         )
 
 
-def getValidPairs(res):
+def getValidPairs(res, X_low, Y_low):
     distances = np.zeros((res, res, len(signal_points)))
-    for idx, obj in enumerate(signal_points):
-        distances[:, :, idx] = dist((X, Y), obj)
+    for i, point in enumerate(signal_points):
+        distances[:, :, i] = dist((X_low, Y_low), point)
 
     closest_three = np.sort(np.argsort(distances, axis=2)[:, :, :3], axis=2)
     unique_rows = np.unique(closest_three.reshape(-1, 3), axis=0)
@@ -50,7 +50,7 @@ def getBoundaryEquations(data, validPairs):
     return equations
 
 
-def plotDiagram(equations):
+def plotDiagram(equations, ax, X, Y):
     areas = []
     keys = list(equations.keys())
     colors = plt.cm.tab10(np.linspace(0, 1, len(keys)))
@@ -103,9 +103,15 @@ xs = np.linspace(xMin, xMax, res)
 ys = np.linspace(yMin, yMax, res)
 X, Y = np.meshgrid(xs, ys)
 
-validPairs = getValidPairs(res)
+res_low = 80
+xs_low = np.linspace(xMin, xMax, res_low)
+ys_low = np.linspace(yMin, yMax, res_low)
+X_low, Y_low = np.meshgrid(xs_low, ys_low)
+
+validPairs = getValidPairs(res_low, X_low, Y_low)
+
 equations = getBoundaryEquations(signal_points, validPairs)
-plotDiagram(equations)
+plotDiagram(equations, ax, X, Y)
 
 plt.title("Երրորդ կարգի Վորոնովի դիագրամ", fontsize=12)
 plt.show()

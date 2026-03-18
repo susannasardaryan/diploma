@@ -63,7 +63,7 @@ def plot_points_and_lines(points):
                 fontsize=8,
             )
 
-def get_valid_pairs(res):
+def get_valid_pairs(res, X, Y):
     valid_pairs_set = set()
 
     for i in range(res):
@@ -95,7 +95,7 @@ def get_boundary_equations(data, valid_pairs):
     return equations
 
 
-def plot_diagram(equations):
+def plot_diagram(equations, ax, X, Y):
     areas = []
     keys = list(equations.keys())
     colors = plt.cm.tab10(np.linspace(0, 1, len(keys)))
@@ -152,9 +152,17 @@ xs = np.linspace(xMin, xMax, res)
 ys = np.linspace(yMin, yMax, res)
 X, Y = np.meshgrid(xs, ys)
 
-validPairs = get_valid_pairs(res)
+res_low = 80
+xs_low = np.linspace(xMin, xMax, res_low)
+ys_low = np.linspace(yMin, yMax, res_low)
+X_low, Y_low = np.meshgrid(xs_low, ys_low)
+
+validPairs = get_valid_pairs(res_low, X_low, Y_low)
+
 equations = get_boundary_equations(signal_points, validPairs)
-plot_diagram(equations)
+
+plot_diagram(equations, ax, X, Y)
+
 
 plt.title("Երկրորդ կարգի Վորոնովի դիագրամ", fontsize=12)
 plt.show()
