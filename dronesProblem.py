@@ -6,7 +6,7 @@ import sympy as sp
 import math
 
 x, y = sp.symbols("x y")
-dt = 0.5
+dt = 0.2
 PERSON_IS_FOUND = False
 
 class Drone:
@@ -132,7 +132,7 @@ def search_person(drone_objects):
 random_points = get_points(count=10, min_distance=400, min_val=0, max_val=2000)
 drones = list(random_points)
 drone_objects = [Drone(i, p) for i, p in enumerate(drones)]
-person_points = get_points(count=1, min_distance=300, min_val=200, max_val=1800, compare_points=drones)
+person_points = get_points(count=1, min_distance=300, min_val=300, max_val=1700, compare_points=drones)
 person_pos = list(person_points)[0]
 
 res_low = 100
