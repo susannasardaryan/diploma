@@ -36,7 +36,7 @@ def get_points(count, min_distance, min_val, max_val, compare_points=None):
                 valid_position = False
                 break
 
-        if valid_position:
+        if valid_position and len(compare_points):
             for existing_x, existing_y in compare_points:
                 distance = math.sqrt(dist((existing_x, existing_y), (x_point, y_point)))
                 if distance < min_distance:
@@ -56,8 +56,8 @@ def plot_points(points, ax, color="black"):
 
 def get_valid_pairs(res, points, X, Y):
     distances = np.zeros((res, res, len(points)))
-    for idx, obj in enumerate(points):
-        distances[:, :, idx] = dist((X, Y), obj)
+    for i, point in enumerate(points):
+        distances[:, :, i] = dist((X, Y), point)
     closest_three = np.sort(np.argsort(distances, axis=2)[:, :, :3], axis=2)
     unique_rows = np.unique(closest_three.reshape(-1, 3), axis=0)
     return [tuple(row) for row in unique_rows]
@@ -154,7 +154,7 @@ valid_pairs1 = get_valid_pairs(res_low, drones, X_low, Y_low)
 eqs1 = get_boundary_equations(drones, valid_pairs1)
 cell_results = plot_diagram(eqs1, ax1, X, Y)
 
-res = 300
+res = 350
 xs = np.linspace(0, 2000, res)
 ys = np.linspace(0, 2000, res)
 X, Y = np.meshgrid(xs, ys)
