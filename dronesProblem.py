@@ -119,7 +119,7 @@ def search_person(drone_objects):
                 drone.k = 5.0    
                 drone.found = True
             else:
-                drone.k = 0.5    
+                drone.k = 0.001    
                 drone.found = False
         return True
 
