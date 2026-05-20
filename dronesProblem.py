@@ -5,31 +5,43 @@ import numpy as np
 import sympy as sp
 import math
 
+COLORS = {
+    "drone_normal": "#1a2544",
+    "drone_found": "#ca4300",
+    "drone_passive": "#000000",
+    "person": "#af2621",
+}
+
 x, y = sp.symbols("x y")
 dt = 0.2
 PERSON_IS_FOUND = False
+
 
 class Drone:
     def __init__(self, id, pos):
         self.id = id
         self.pos = np.array(pos, dtype=float)
-        self.k = 0.3
+        self.k = 0.5
         self.found = False
+
 
 def dist(M, Q):
     return (M[0] - Q[0]) ** 2 + (M[1] - Q[1]) ** 2
 
-def get_points(count, min_distance, min_val, max_val, compare_points=None): 
+
+def get_points(count, min_distance, min_val, max_val, compare_points=None):
     if compare_points is None:
         compare_points = []
 
     random_points = set()
-    while len(random_points) < count:
+    attempts = 0
+    while len(random_points) < count and attempts < 1000:
+        attempts += 1
         x_point = np.random.randint(min_val, max_val)
         y_point = np.random.randint(min_val, max_val)
 
         valid_position = True
-        
+
         for existing_x, existing_y in random_points:
             distance = math.sqrt(dist((existing_x, existing_y), (x_point, y_point)))
             if distance < min_distance:
@@ -43,15 +55,42 @@ def get_points(count, min_distance, min_val, max_val, compare_points=None):
                     valid_position = False
                     break
 
-        if valid_position:
+        if valid_position or attempts >= 1000:
             random_points.add((x_point, y_point))
+            attempts = 0
 
     return random_points
 
-def plot_points(points, ax, color="black"):
+
+def plot_points(points, ax, drones_list=None):
     for i, p in enumerate(points):
-        ax.scatter(p[0], p[1], color=color, s=40, marker=(4, 1, 45))
-        ax.text(p[0] + 15, p[1] - 15, f"$P_{{{i+1}}}$", fontweight="bold", fontsize=8)
+        if drones_list is not None:
+            d = drones_list[i]
+            if d.found:
+                color, size = COLORS["drone_found"], 80
+            elif PERSON_IS_FOUND and not d.found:
+                color, size = COLORS["drone_passive"], 55
+            else:
+                color, size = COLORS["drone_normal"], 75
+        else:
+            color, size = COLORS["drone_normal"], 75
+
+        ax.scatter(
+            p[0],
+            p[1],
+            color=color,
+            s=size,
+            marker=(4, 1, 45),
+            linewidths=0.8,
+        )
+        ax.text(
+            p[0] + 15,
+            p[1] - 15,
+            f"$D_{{{i+1}}}$",
+            fontweight="bold",
+            fontsize=8,
+            color=color,
+        )
 
 
 def get_valid_pairs(res, points, X, Y):
@@ -96,17 +135,22 @@ def plot_diagram(equations, ax, X, Y):
             cx, cy = np.mean(X[mask]), np.mean(Y[mask])
             cell_data[key] = (cx, cy)
             ax.text(
-                cx, cy, f"({key[0]+1},{key[1]+1},{key[2]+1})", fontsize=6, ha="center"
+                cx,
+                cy,
+                f"({key[0]+1},{key[1]+1},{key[2]+1})",
+                fontsize=6,
+                ha="center",
+                color="#333333",
             )
     return cell_data
 
 
 def search_person(drone_objects):
     global PERSON_IS_FOUND
-    
+
     if not PERSON_IS_FOUND:
         for d in drone_objects:
-            if np.linalg.norm(d.pos - person_pos) <= 300:
+            if np.linalg.norm(d.pos - person_pos) <= 320:
                 PERSON_IS_FOUND = True
                 break
 
@@ -116,10 +160,10 @@ def search_person(drone_objects):
 
         for idx, drone in enumerate(drone_objects):
             if idx in indices:
-                drone.k = 5.0    
+                drone.k = 1.7
                 drone.found = True
             else:
-                drone.k = 0.001    
+                drone.k = 0.001
                 drone.found = False
         return True
 
@@ -129,13 +173,15 @@ def search_person(drone_objects):
             drone.found = False
         return False
 
-random_points = get_points(count=10, min_distance=400, min_val=0, max_val=2000)
+
+random_points = get_points(count=10, min_distance=400, min_val=50, max_val=1950)
 drones = list(random_points)
 drone_objects = [Drone(i, p) for i, p in enumerate(drones)]
-person_points = get_points(count=1, min_distance=300, min_val=300, max_val=1700, compare_points=drones)
+person_points = get_points(
+    count=1, min_distance=350, min_val=700, max_val=1450, compare_points=drones
+)
 person_pos = list(person_points)[0]
-
-res_low = 100
+res_low = 190
 xs_low = np.linspace(0, 2000, res_low)
 ys_low = np.linspace(0, 2000, res_low)
 X_low, Y_low = np.meshgrid(xs_low, ys_low)
@@ -148,13 +194,20 @@ X, Y = np.meshgrid(xs, ys)
 fig1, ax1 = plt.subplots(figsize=(8, 8))
 ax1.set_aspect("equal")
 ax1.set_title("Սկզբնական դիրքը")
-plot_points(drones, ax1, "blue")
-ax1.scatter(person_pos[0], person_pos[1], color="red", marker="X", s=100)
 valid_pairs1 = get_valid_pairs(res_low, drones, X_low, Y_low)
 eqs1 = get_boundary_equations(drones, valid_pairs1)
 cell_results = plot_diagram(eqs1, ax1, X, Y)
+plot_points(drones, ax1)
+ax1.scatter(
+    person_pos[0],
+    person_pos[1],
+    color=COLORS["person"],
+    marker="X",
+    s=130,
+    linewidths=1,
+)
 
-res = 350
+res = 400
 xs = np.linspace(0, 2000, res)
 ys = np.linspace(0, 2000, res)
 X, Y = np.meshgrid(xs, ys)
@@ -196,23 +249,24 @@ def update_diagram(frame):
             Ti_sum[idx] += center
             counts[idx] += 1
 
-    person_found = search_person(drone_objects)
+    search_person(drone_objects)
 
     arrived = 0
     for i in range(len(drone_objects)):
         d = drone_objects[i]
         if counts[i] > 0:
             Ti = Ti_sum[i] / counts[i]
-            if not person_found and frame > 35:
-                search_radius = 300
-                offset_x = math.sin(frame * 0.08 + d.id) * search_radius
-                offset_y = math.cos(frame * 0.05 + d.id) * search_radius
+            if not PERSON_IS_FOUND and frame > 35:
+                search_radius = 100
+
+                offset_x = math.sin(frame * 0.04) * search_radius
+                offset_y = math.cos(frame * 0.05) * search_radius
 
                 target = np.clip(Ti + np.array([offset_x, offset_y]), 100, 1900)
             else:
                 target = Ti
 
-            if d.found and np.linalg.norm(d.pos - target) < 10:
+            if d.found and np.linalg.norm(d.pos - target) < 30:
                 arrived += 1
 
             d.pos = target + (d.pos - target) * math.exp(-d.k * dt)
@@ -220,17 +274,36 @@ def update_diagram(frame):
     if arrived >= 3:
         active_drones = [d.id + 1 for d in drone_objects if d.found]
         drones_names = ", ".join(map(str, active_drones))
-        ax2.set_title(f"Մարդը գտնված է {drones_names} դրոնների կողմից!")
-        plot_points([tuple(d.pos) for d in drone_objects], ax2, "green")
-        ax2.scatter(person_pos[0], person_pos[1], color="red", marker="X", s=100)
+        ax2.set_title(
+            f"Մարդը գտնված է {drones_names} դրոնների կողմից!",
+            color=COLORS["drone_found"],
+        )
+
+        plot_points(
+            [tuple(d.pos) for d in drone_objects], ax2, drones_list=drone_objects
+        )
+        ax2.scatter(
+            person_pos[0],
+            person_pos[1],
+            color=COLORS["person"],
+            marker="X",
+            s=130,
+            linewidths=0.8,
+        )
         animation.event_source.stop()
         return
-    
-    plot_points([tuple(d.pos) for d in drone_objects], ax2, "black")
-    ax2.scatter(person_pos[0], person_pos[1], color="red", marker="X", s=100)
-    # plt.savefig(f"frames/frame_{frame:03d}.png", dpi=400, bbox_inches='tight')
+
+    plot_points([tuple(d.pos) for d in drone_objects], ax2, drones_list=drone_objects)
+    ax2.scatter(
+        person_pos[0],
+        person_pos[1],
+        color=COLORS["person"],
+        marker="X",
+        s=130,
+        linewidths=0.8,
+    )
 
 
-animation = FuncAnimation(fig2, update_diagram, frames=150, interval=200, repeat=False)
-# animation.save('frames/drone_search.gif', writer='pillow', fps=50)
+animation = FuncAnimation(fig2, update_diagram, frames=400, interval=50, repeat=False)
+
 plt.show()
